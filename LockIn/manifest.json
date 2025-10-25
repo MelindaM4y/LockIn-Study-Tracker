@@ -1,0 +1,9 @@
+{
+  "name": "LockIn: Study Tracker ",
+  "description": "",
+  "version": "1.0",
+  "manifest_version": 3,
+  "action": {
+    "default_popup": "dist/index.html"
+  }
+}
