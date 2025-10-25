@@ -3,7 +3,18 @@
   "description": "",
   "version": "1.0",
   "manifest_version": 3,
-  "action": {
+  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+    "action": {
     "default_popup": "dist/index.html"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["webgazer.js", "content.js"]
+    }
+  ]
 }
