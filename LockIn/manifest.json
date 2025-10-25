@@ -11,6 +11,12 @@
     "action": {
     "default_title": "LockIn: Study Tracker"
   },
+     "icons": {
+        "16": "public/LockinLogo.png",
+        "32": "public/LockinLogo.png",
+        "48": "public/LockinLogo.png",
+        "128": "public/LockinLogo.png"
+    },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
