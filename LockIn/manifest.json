@@ -3,13 +3,13 @@
   "description": "",
   "version": "1.0",
   "manifest_version": 3,
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "permissions": ["storage", "activeTab", "scripting", "tabs", "windows"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
     "action": {
-    "default_popup": "dist/index.html"
+    "default_title": "LockIn: Study Tracker"
   },
      "icons": {
         "16": "public/LockinLogo.png",
@@ -22,5 +22,11 @@
       "matches": ["<all_urls>"],
       "js": ["webgazer.js", "content.js"]
     }
-  ]
+  ],
+    "icons": {
+        "16": "public/LockinLogo.png",
+        "32": "public/LockinLogo.png",
+        "48": "public/LockinLogo.png",
+        "128": "public/LockinLogo.png"
+    }
 }
