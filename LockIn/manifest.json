@@ -16,7 +16,7 @@
       "matches": ["<all_urls>"],
       "js": ["webgazer.js", "content.js"]
     }
-  ]
+  ],
     "icons": {
         "16": "public/LockinLogo.png",
         "32": "public/LockinLogo.png",

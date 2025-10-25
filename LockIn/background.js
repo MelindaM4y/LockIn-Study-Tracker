@@ -90,8 +90,8 @@ chrome.action.onClicked.addListener(async () => {
   await chrome.windows.create({
     url,
     type: 'popup',
-    width: 420,
-    height: 700,
+    width: 350,
+    height: 300,
     focused: true
   });
 });

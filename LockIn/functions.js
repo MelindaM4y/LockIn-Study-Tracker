@@ -48,10 +48,10 @@ function resetSession() {
 
 //Multiplier feature 
 function computeMultiplier(focusedSeconds) {
-    if (focusedSeconds >= 2400) return 3;      // 40+ min
-    if (focusedSeconds >= 1800) return 2.5;    // 30–39 min
-    if (focusedSeconds >= 1200) return 2;      // 20–29 min
-    if (focusedSeconds >= 600) return 1.5;     // 10–19 min
+    if (focusedSeconds >= 120) return 3;      // 40+ min
+    if (focusedSeconds >= 90) return 2.5;    // 30–39 min
+    if (focusedSeconds >= 60) return 2;      // 20–29 min
+    if (focusedSeconds >= 30) return 1.5;     // 10–19 min
     return 1;                                  // <10 min
 }
 
