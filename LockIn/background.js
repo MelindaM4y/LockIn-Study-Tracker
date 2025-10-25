@@ -73,3 +73,25 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
   }
 });
+
+chrome.action.onClicked.addListener(async () => {
+  const url = chrome.runtime.getURL('dist/index.html'); 
+
+  // Find an existing popup window showing our UI
+  const wins = await chrome.windows.getAll({ populate: true });
+  const existing = wins.find(
+    w => w.type === 'popup' && w.tabs?.some(t => t.url?.startsWith(url)));
+
+  if (existing?.id) {
+    await chrome.windows.update(existing.id, { focused: true });
+    return;
+  }
+
+  await chrome.windows.create({
+    url,
+    type: 'popup',
+    width: 420,
+    height: 700,
+    focused: true
+  });
+});

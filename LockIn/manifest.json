@@ -3,13 +3,13 @@
   "description": "",
   "version": "1.0",
   "manifest_version": 3,
-  "permissions": ["storage", "activeTab", "scripting", "tabs"],
+  "permissions": ["storage", "activeTab", "scripting", "tabs", "windows"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
     "action": {
-    "default_popup": "dist/index.html"
+    "default_title": "LockIn: Study Tracker"
   },
   "content_scripts": [
     {
