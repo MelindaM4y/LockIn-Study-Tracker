@@ -5,5 +5,11 @@
   "manifest_version": 3,
   "action": {
     "default_popup": "dist/index.html"
-  }
+  },
+    "icons": {
+        "16": "public/LockinLogo.png",
+        "32": "public/LockinLogo.png",
+        "48": "public/LockinLogo.png",
+        "128": "public/LockinLogo.png"
+    }
 }

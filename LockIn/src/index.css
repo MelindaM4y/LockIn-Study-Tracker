@@ -1,1 +1,10 @@
-@import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Sarpanch:wght@400;500;600;700;800;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.font-sarpanch {
+  font-family: 'Sarpanch', Helvetica, Arial, sans-serif;
+  font-style: normal;
+}
