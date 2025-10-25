@@ -1,4 +1,5 @@
 import logo from '../assets/LockInLogo.png';
+import brick from '../assets/brickwall.png';
 import { useState, useEffect } from "react";
 
 function SessionPage() {
@@ -24,7 +25,10 @@ function SessionPage() {
   };
 
   return (
-    <div className="bg-[#FBFBFF] min-w-[284px] min-h-[224px] overflow-hidden relative p-2">
+    <div
+      className="min-w-[284px] min-h-[224px] overflow-hidden relative p-2 bg-cover bg-center"
+      style={{ backgroundImage: `url(${brick})` }}
+    >
       <img
         src={logo}
         alt="Logo"
