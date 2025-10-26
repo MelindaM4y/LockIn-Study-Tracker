@@ -15,6 +15,11 @@ function SessionPage() {
     const [highScore, setHighScore] = useState(0);
     const [multiplier, setMultiplier] = useState(1);
     
+    // WebGazer tracking state
+    const [tracking, setTracking] = useState(false);
+    const [isLooking, setIsLooking] = useState(true);
+    const lastGazeSentRef = useRef(0);
+    
     // Function to get the latest data from storage and update component state
     const updateUiFromStorage = () => {
         getData((data) => {
@@ -23,6 +28,92 @@ function SessionPage() {
             setMultiplier(data.multiplier);
         });
     };
+
+    // --- WebGazer Camera & Tracking ---
+    
+    const startTracking = async () => {
+        try {
+            // Request camera permission (prompts for extension origin)
+            await navigator.mediaDevices.getUserMedia({ video: true });
+
+            // Start WebGazer
+            if (window.webgazer) {
+                // Temporarily suppress the HTTPS alert from WebGazer
+                const originalAlert = window.alert;
+                window.alert = () => {};
+                
+                window.webgazer
+                    .setGazeListener((data, timestamp) => {
+                        if (data) {
+                            // Throttle to once per second (1000ms)
+                            const now = Date.now();
+                            if (now - lastGazeSentRef.current < 1000) {
+                                return;
+                            }
+                            lastGazeSentRef.current = now;
+                            
+                            console.log('Gaze detected:', data.x.toFixed(1), data.y.toFixed(1));
+                            // Send gaze data to background for processing
+                            chrome.runtime.sendMessage({ 
+                                type: 'GAZE_DATA', 
+                                data, 
+                                timestamp 
+                            }, (response) => {
+                                if (chrome.runtime.lastError) {
+                                    console.log('Message error:', chrome.runtime.lastError);
+                                }
+                            });
+                        } else {
+                            console.log('No gaze data detected');
+                        }
+                    })
+                    .showVideo(false)
+                    .showFaceOverlay(false)
+                    .showFaceFeedbackBox(false)
+                    .showPredictionPoints(false)
+                    // Adjust WebGazer settings for better accuracy
+                    .saveDataAcrossSessions(true)  // Remember calibration
+                    .applyKalmanFilter(true);      // Smooth out jittery predictions
+
+                await window.webgazer.begin();
+                
+                // Restore original alert
+                window.alert = originalAlert;
+                
+                setTracking(true);
+                
+                // Start the timer when tracking begins
+                startTimer();
+                
+                console.log('👁️ WebGazer tracking started');
+            }
+        } catch (err) {
+            console.error('Camera permission denied or unavailable:', err);
+        }
+    };
+
+    const stopTracking = () => {
+        if (window.webgazer) {
+            window.webgazer.pause();
+        }
+        setTracking(false);
+        
+        // Stop the timer when tracking stops
+        clearInterval(intervalRef.current);
+        
+        console.log('Tracking stopped');
+    };
+
+    // Listen for focus state updates from background
+    useEffect(() => {
+        const messageListener = (msg) => {
+            if (msg.type === 'FOCUS_STATE_UPDATE') {
+                setIsLooking(msg.looking);
+            }
+        };
+        chrome.runtime.onMessage.addListener(messageListener);
+        return () => chrome.runtime.onMessage.removeListener(messageListener);
+    }, []);
 
     // --- Timer and Data Sync Logic ---
 
@@ -37,11 +128,10 @@ function SessionPage() {
             // 1. Update the local elapsed time state (for the UI display)
             setSeconds(elapsed);
             
-            // 2. Call the data function to increment score and update storage
-            // This also handles the logic for multiplier and high score updates.
-            incrementScore(10, 1); // 10 base points per 1 second
+            // 2. Only increment score if user is actively looking at the screen
+            // The background worker handles scoring based on gaze data
             
-            // 3. Sync the component state with the new data after incrementing
+            // 3. Sync the component state with the new data from storage
             updateUiFromStorage();
 
         }, 1000);
@@ -49,12 +139,14 @@ function SessionPage() {
 
     // Initial load and timer setup
     useEffect(() => {
-        // Load initial state and start tracking score
+        // Load initial state but don't start timer until user clicks Start
         updateUiFromStorage();
-        startTimer();
         
         // Cleanup function
-        return () => clearInterval(intervalRef.current);
+        return () => {
+            clearInterval(intervalRef.current);
+            if (tracking) stopTracking();
+        };
     }, []);
 
     // --- Session Control ---
@@ -110,6 +202,22 @@ function SessionPage() {
             <div className="absolute top-[201px] left-[5px] text-black text-[18px] font-sarpanch">
                 {formatTime(seconds)}
             </div>
+
+            {/* Tracking status indicator */}
+            <div className="absolute top-[2px] right-[5px] flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-full ${isLooking ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-[10px] text-black font-sarpanch">
+                    {tracking ? (isLooking ? 'Tracking' : 'Away') : 'Off'}
+                </span>
+            </div>
+
+            {/* Start/Stop Tracking Button */}
+            <button
+                onClick={tracking ? stopTracking : startTracking}
+                className="absolute top-[70px] left-[5px] w-[40px] h-[25px] bg-[#4CAF50] text-white text-[10px] font-sarpanch font-bold border-2 border-black"
+            >
+                {tracking ? 'Stop' : 'Start'}
+            </button>
 
             <button
                 onClick={handleSessionComplete}
