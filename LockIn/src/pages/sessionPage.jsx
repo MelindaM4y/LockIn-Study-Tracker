@@ -1,16 +1,15 @@
 import logo from '../assets/LockInLogo.png';
 import brick from '../assets/brickwall.png';
 import { useState, useEffect, useRef } from "react";
-// Import the data handling functions from your other file
-import { getData, incrementScore, resetSession as resetStoredSession } from '../functions';// NOTE: You must replace '../path/to/your/data-file' with the actual path to your file.
+import { getData, incrementScore, resetSession as resetStoredSession } from '../functions';
 
 function SessionPage() {
-    // Timer state (local to the UI)
-    const [seconds, setSeconds] = useState(0); 
+    const [seconds, setSeconds] = useState(0);
+    const [isRunning, setIsRunning] = useState(false); // track if session is active
     const intervalRef = useRef(null);
     const startTimeRef = useRef(Date.now());
-    
-    // Data state (synced with chrome.storage.local)
+
+    // Stored data
     const [score, setScore] = useState(0);
     const [highScore, setHighScore] = useState(0);
     const [multiplier, setMultiplier] = useState(1);
@@ -21,9 +20,11 @@ function SessionPage() {
     const lastGazeSentRef = useRef(0); // Throttle gaze messages
     
     // Function to get the latest data from storage and update component state
+
+    // --- Sync data from chrome storage ---
     const updateUiFromStorage = () => {
         getData((data) => {
-            setScore(Math.floor(data.score)); // Assuming score is floating point during calculation
+            setScore(Math.floor(data.score));
             setHighScore(Math.floor(data.highScore));
             setMultiplier(data.multiplier);
         });
@@ -123,27 +124,49 @@ function SessionPage() {
 
     // --- Timer and Data Sync Logic ---
 
+    // --- Timer logic ---
     const startTimer = () => {
         clearInterval(intervalRef.current);
         startTimeRef.current = Date.now();
-        
+
         intervalRef.current = setInterval(() => {
             const now = Date.now();
             const elapsed = Math.floor((now - startTimeRef.current) / 1000);
-            
-            // 1. Update the local elapsed time state (for the UI display)
             setSeconds(elapsed);
             
             // 2. Only increment score if user is actively looking at the screen
             // The background worker handles scoring based on gaze data
             
             // 3. Sync the component state with the new data from storage
+            incrementScore(10, multiplier);
             updateUiFromStorage();
-
         }, 1000);
     };
 
-    // Initial load and timer setup
+    const stopTimer = () => {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+    };
+
+    // --- Start or stop session ---
+    const handleSessionToggle = () => {
+        if (isRunning) {
+            // Stop session
+            stopTimer();
+            resetStoredSession();
+            setSeconds(0);
+            setScore(0);
+            setMultiplier(1);
+            setIsRunning(false);
+        } else {
+            // Start session
+            updateUiFromStorage();
+            startTimer();
+            setIsRunning(true);
+        }
+    };
+
+    // --- Cleanup ---
     useEffect(() => {
         // Load initial state but don't start timer until user clicks Start
         updateUiFromStorage();
@@ -151,41 +174,22 @@ function SessionPage() {
         // Cleanup function
         return () => {
             clearInterval(intervalRef.current);
-            if (tracking) stopTracking();
-        };
+            if (tracking) stopTracking(); 
     }, []);
 
-    // --- Session Control ---
-
-    // Handles button click to end session
-    const handleSessionComplete = () => {
-        clearInterval(intervalRef.current); // Stop the current timer
-        
-        // Call the data function to clear the score, focusedSeconds, etc.
-        resetStoredSession(); 
-        
-        // Reset local UI state to 0 and restart the timer for the next session
-        setSeconds(0);
-        setScore(0);
-        setMultiplier(1);
-        startTimer(); 
-    };
-
     // --- UI Helpers ---
-
     const formatTime = (secs) => {
         const h = String(Math.floor(secs / 3600)).padStart(2, "0");
         const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
         const s = String(secs % 60).padStart(2, "0");
-        return `Locked in for ${h}h ${m}m ${s}s... `;
+        return `Locked in for ${h}h ${m}m ${s}s...`;
     };
 
     const formatScore = (score) => {
-        return score.toLocaleString('en-US', { minimumIntegerDigits: 6 });
+        return score.toLocaleString('en-US', { minimumIntegerDigits: 1 });
     };
 
     // --- Render ---
-
     return (
         <div
             className="min-w-[284px] min-h-[224px] overflow-hidden relative p-2 bg-cover bg-center"
@@ -201,7 +205,7 @@ function SessionPage() {
                 Track Your Studying
             </div>
 
-            <div className="absolute top-[50px] left-[115px] text-black text-[20px] font-sarpanch">
+            <div className="absolute top-[50px] left-[127px] text-black text-[20px] font-sarpanch">
                 SCORE
             </div>
 
@@ -225,18 +229,29 @@ function SessionPage() {
                 {tracking ? 'Stop' : 'Start'}
             </button> */}
 
+            {/* Button toggles session start/stop */}
             <button
-                onClick={handleSessionComplete}
-                className="absolute top-[140px] left-[102px] w-[90px] h-[45px] bg-[#F6F872] text-black font-sarpanch font-extrabold border-3"
+                onClick={handleSessionToggle}
+                className="absolute top-[140px] left-[117px] w-[90px] h-[45px] bg-[#F6F872] text-black font-sarpanch font-extrabold border-3"
             >
-                Session <span className="text-[#BD2C2C] font-black">Complete</span>
+                {isRunning ? (
+                    <>Session <span className="text-[#BD2C2C] font-black">Complete</span></>
+                ) : (
+                    <>Start <span className="text-[#2CBD2C] font-black">Session</span></>
+                )}
             </button>
 
-            <div className="absolute top-[63px] left-[50px] text-black text-[45px] font-sarpanch">
-                {formatScore(score)}
+            {/* Centered Score + Multiplier */}
+            <div className="absolute top-[63px] left-1/2 transform -translate-x-1/2 w-[180px] h-[60px] flex justify-center items-center relative">
+                <span className="text-black text-[45px] font-sarpanch text-center">
+                    {formatScore(score)}
+                </span>
+                <span className="absolute top-[-8px] right-[-8px] font-sarpanch text-[#D72929] text-[30px] rotate-[-11.64deg] font-black">
+                    {multiplier}x
+                </span>
             </div>
 
-            <div className="absolute top-[115px] left-[70px] text-[#FFFFFF] text-[15px] font-sarpanch">
+            <div className="absolute top-[115px] left-[87px] text-[#FFFFFF] text-[15px] font-sarpanch">
                 High Score: {formatScore(highScore)}
             </div>
         </div>
