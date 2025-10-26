@@ -1,7 +1,5 @@
 # 🧠 LockIn: Study Tracker
 
-![LockIn Logo](public/LockInLogo.png)
-
 **LockIn** is a Chrome extension designed to help you stay focused while studying.  
 It uses **eye-tracking** and **time tracking** to measure how long you stay focused and rewards you with points and score multipliers for maintaining concentration.  
 When you look away or lose focus, your streak (and multiplier) drops — motivating you to “lock in” and stay on task!
@@ -49,7 +47,17 @@ When you look away or lose focus, your streak (and multiplier) drops — motivat
 
 ## ⚙️ Installation
 
-### 1️⃣ Clone the Repository
-```bash
-git clone https://github.com/<your-username>/lockin-study-tracker.git
-cd lockin-study-tracker
+1. **Download the Extension**
+   - Clone this repository to your local machine
+   - Or download the ZIP file and extract it
+
+2. **Load the Extension in Chrome**
+   - Open Chrome and navigate to `chrome://extensions/`
+   - Enable "Developer mode" by toggling the switch in the top-right corner
+   - Click "Load unpacked" button
+   - Select the folder containing the extension files
+   - The Browser Pet Extension should now appear in your extensions list
+
+3. **Pin the Extension**
+   - Click the puzzle piece icon in Chrome's toolbar
+   - Find "LockIn: Study Tracker" and click the pin icon to keep it visible
