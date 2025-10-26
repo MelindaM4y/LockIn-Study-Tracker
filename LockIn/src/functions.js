@@ -38,13 +38,16 @@ function incrementScore(basePoints = 10, intervalSeconds = 1) {
 
 //Resetting session
 function resetSession() {
-    saveData({
-        score: 0,
-        focusedSeconds: 0,
-        multiplier: 1,
-        lastReset: Date.now()
+    getData(({highScore}) => {
+        saveData({
+            score: 0,
+            focusedSeconds: 0,
+            multiplier: 1,
+            highScore: highScore, // Preserve high score
+            lastReset: Date.now()
+        });
+        console.log('Session reset!');
     });
-    console.log('Session reset!');
 }
 
 

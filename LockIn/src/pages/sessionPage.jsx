@@ -24,6 +24,7 @@ function SessionPage() {
     // --- Sync data from chrome storage ---
     const updateUiFromStorage = () => {
         getData((data) => {
+            console.log('📊 Updating UI from storage:', data);
             setScore(Math.floor(data.score));
             setHighScore(Math.floor(data.highScore));
             setMultiplier(data.multiplier);
@@ -82,14 +83,13 @@ function SessionPage() {
                     .saveDataAcrossSessions(true)
                     .applyKalmanFilter(true);
 
+                // Wait for WebGazer to fully initialize before marking as tracking
                 await window.webgazer.begin();
                 
                 // Restore original alert
                 window.alert = originalAlert;
                 
                 setTracking(true);
-                startTimer();
-                
                 console.log('WebGazer tracking started in popup');
             }
         } catch (err) {
@@ -107,7 +107,6 @@ function SessionPage() {
             window.webgazer.pause();
         }
         setTracking(false);
-        clearInterval(intervalRef.current);
         console.log('Tracking stopped');
     };
 
@@ -122,6 +121,18 @@ function SessionPage() {
         return () => chrome.runtime.onMessage.removeListener(messageListener);
     }, []);
 
+    // Listen for storage changes to update UI immediately
+    useEffect(() => {
+        const storageListener = (changes, area) => {
+            if (area === 'local') {
+                console.log('💾 Storage changed:', changes);
+                updateUiFromStorage();
+            }
+        };
+        chrome.storage.onChanged.addListener(storageListener);
+        return () => chrome.storage.onChanged.removeListener(storageListener);
+    }, []);
+
     // --- Timer and Data Sync Logic ---
 
     // --- Timer logic ---
@@ -134,11 +145,8 @@ function SessionPage() {
             const elapsed = Math.floor((now - startTimeRef.current) / 1000);
             setSeconds(elapsed);
             
-            // 2. Only increment score if user is actively looking at the screen
-            // The background worker handles scoring based on gaze data
-            
-            // 3. Sync the component state with the new data from storage
-            incrementScore(10, multiplier);
+            // Background worker handles all scoring based on gaze data
+            // Just sync the UI with current storage state
             updateUiFromStorage();
         }, 1000);
     };
@@ -149,33 +157,36 @@ function SessionPage() {
     };
 
     // --- Start or stop session ---
-    const handleSessionToggle = () => {
+    const handleSessionToggle = async () => {
         if (isRunning) {
             // Stop session
             stopTimer();
+            stopTracking();
             resetStoredSession();
             setSeconds(0);
             setScore(0);
             setMultiplier(1);
             setIsRunning(false);
         } else {
-            // Start session
+            // Start session - start timer first, then wait for tracking to be ready
             updateUiFromStorage();
-            startTimer();
             setIsRunning(true);
+            startTimer(); // Start timer immediately
+            await startTracking(); // Wait for WebGazer to initialize
         }
     };
 
     // --- Cleanup ---
     useEffect(() => {
-        // Load initial state but don't start timer until user clicks Start
+        // Load initial state but don't start tracking until user clicks Start Session
         updateUiFromStorage();
         
-        // Cleanup function
+        // Cleanup function - only runs on component unmount
         return () => {
             clearInterval(intervalRef.current);
-            if (tracking) stopTracking(); 
-    }, []);
+            if (tracking) stopTracking();
+        };
+    }, []); // Empty dependency array - only run once on mount/unmount
 
     // --- UI Helpers ---
     const formatTime = (secs) => {

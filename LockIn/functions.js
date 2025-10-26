@@ -38,13 +38,16 @@ function incrementScore(basePoints = 10, intervalSeconds = 1) {
 
 //Resetting session
 function resetSession() {
-    saveData({
-        score: 0,
-        focusedSeconds: 0,
-        multiplier: 1,
-        lastReset: Date.now()
+    getData(({highScore}) => {
+        saveData({
+            score: 0,
+            focusedSeconds: 0,
+            multiplier: 1,
+            highScore: highScore, // Preserve high score
+            lastReset: Date.now()
+        });
+        console.log('Session reset!');
     });
-    console.log('Session reset!');
 }
 
 
@@ -58,26 +61,18 @@ function computeMultiplier(focusedSeconds) {
 }
 
 function handleFocusLoss(lossSeconds) {
-    console.log('=== handleFocusLoss CALLED ===');
-    console.log('lossSeconds:', lossSeconds);
-    console.log('Type of lossSeconds:', typeof lossSeconds);
-    
     if (lossSeconds >= 10) {
-        console.log('Loss >= 10 seconds, resetting multiplier and focusedSeconds to 0');
+        // User looked away >= 10 seconds → reset focus and multiplier
         saveData({focusedSeconds: 0, multiplier: 1});
-        console.log('Multiplier reset complete!');
+        console.log('Focus lost >=10s: multiplier reset!');
     } else {
-        console.log('Loss < 10 seconds, subtracting from focusedSeconds');
         // Short loss: subtract lost seconds
         getData(({focusedSeconds}) => {
-            console.log('Current focusedSeconds before subtraction:', focusedSeconds);
             focusedSeconds = Math.max(focusedSeconds - lossSeconds, 0);
             const multiplier = computeMultiplier(focusedSeconds);
-            console.log('New focusedSeconds:', focusedSeconds, 'New multiplier:', multiplier);
             saveData({focusedSeconds, multiplier});
         });
     }
-    console.log('=== handleFocusLoss END ===');
 }
 
 //High Score saving

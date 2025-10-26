@@ -23,16 +23,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     lastTickAt = Date.now();
     scoringInterval = setInterval(() => {
       const now = Date.now();
-      const elapsedSec = Math.floor((now - lastTickAt) / 1000);
+      const elapsedSec = 1; // Always increment by 1 second
       
-      if (elapsedSec > 0 && isLooking) {
+      if (isLooking) {
         // Award points while looking (even if popup is minimized)
         if (typeof StorageHelper !== 'undefined' && StorageHelper.incrementScore) {
           StorageHelper.incrementScore(10, elapsedSec);
-          console.log('✅ Points awarded (background loop):', elapsedSec, 'seconds');
+          console.log('✅ Points awarded (background loop): 1 second');
         }
-        lastTickAt = now;
       }
+      lastTickAt = now;
     }, 1000); // Run every second
   }
   
