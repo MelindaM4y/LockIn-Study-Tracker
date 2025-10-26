@@ -18,7 +18,7 @@ function SessionPage() {
     // WebGazer tracking state
     const [tracking, setTracking] = useState(false);
     const [isLooking, setIsLooking] = useState(true);
-    const lastGazeSentRef = useRef(0);
+    const lastGazeSentRef = useRef(0); // Throttle gaze messages
     
     // Function to get the latest data from storage and update component state
     const updateUiFromStorage = () => {
