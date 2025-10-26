@@ -13,6 +13,13 @@ function SessionPage() {
     const [score, setScore] = useState(0);
     const [highScore, setHighScore] = useState(0);
     const [multiplier, setMultiplier] = useState(1);
+    
+    // WebGazer tracking state
+    const [tracking, setTracking] = useState(false);
+    const [isLooking, setIsLooking] = useState(true);
+    const lastGazeSentRef = useRef(0);
+    
+    // Function to get the latest data from storage and update component state
 
     // --- Sync data from chrome storage ---
     const updateUiFromStorage = () => {
@@ -23,6 +30,100 @@ function SessionPage() {
         });
     };
 
+    // --- WebGazer Camera & Tracking ---
+    
+    const startTracking = async () => {
+        try {
+            // Tell background to start the scoring loop
+            chrome.runtime.sendMessage({ 
+                type: 'START_SCORING'
+            });
+            
+            // Request camera permission (prompts for extension origin)
+            await navigator.mediaDevices.getUserMedia({ video: true });
+
+            // Start WebGazer in the popup
+            if (window.webgazer) {
+                // Temporarily suppress the HTTPS alert from WebGazer
+                const originalAlert = window.alert;
+                window.alert = () => {};
+                
+                window.webgazer
+                    .setGazeListener((data, timestamp) => {
+                        // Throttle to once per second
+                        const now = Date.now();
+                        if (now - lastGazeSentRef.current < 1000) {
+                            return;
+                        }
+                        lastGazeSentRef.current = now;
+                        
+                        // Send gaze data to background (even if null)
+                        // We'll use face detection (data exists) as the indicator of looking
+                        chrome.runtime.sendMessage({ 
+                            type: 'GAZE_DATA', 
+                            data,  // Can be null if no face detected
+                            timestamp 
+                        }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                console.log('Message error:', chrome.runtime.lastError);
+                            }
+                        });
+                        
+                        if (data) {
+                            console.log('Face detected - user is looking');
+                        } else {
+                            console.log('No face detected - user looked away');
+                        }
+                    })
+                    .showVideo(false)
+                    .showFaceOverlay(false)
+                    .showFaceFeedbackBox(false)
+                    .showPredictionPoints(false)
+                    .saveDataAcrossSessions(true)
+                    .applyKalmanFilter(true);
+
+                await window.webgazer.begin();
+                
+                // Restore original alert
+                window.alert = originalAlert;
+                
+                setTracking(true);
+                startTimer();
+                
+                console.log('WebGazer tracking started in popup');
+            }
+        } catch (err) {
+            console.error('Camera permission denied or unavailable:', err);
+        }
+    };
+
+    const stopTracking = () => {
+        // Tell background to stop the scoring loop
+        chrome.runtime.sendMessage({ 
+            type: 'STOP_SCORING'
+        });
+        
+        if (window.webgazer) {
+            window.webgazer.pause();
+        }
+        setTracking(false);
+        clearInterval(intervalRef.current);
+        console.log('Tracking stopped');
+    };
+
+    // Listen for focus state updates from background
+    useEffect(() => {
+        const messageListener = (msg) => {
+            if (msg.type === 'FOCUS_STATE_UPDATE') {
+                setIsLooking(msg.looking);
+            }
+        };
+        chrome.runtime.onMessage.addListener(messageListener);
+        return () => chrome.runtime.onMessage.removeListener(messageListener);
+    }, []);
+
+    // --- Timer and Data Sync Logic ---
+
     // --- Timer logic ---
     const startTimer = () => {
         clearInterval(intervalRef.current);
@@ -32,6 +133,11 @@ function SessionPage() {
             const now = Date.now();
             const elapsed = Math.floor((now - startTimeRef.current) / 1000);
             setSeconds(elapsed);
+            
+            // 2. Only increment score if user is actively looking at the screen
+            // The background worker handles scoring based on gaze data
+            
+            // 3. Sync the component state with the new data from storage
             incrementScore(10, multiplier);
             updateUiFromStorage();
         }, 1000);
@@ -62,7 +168,13 @@ function SessionPage() {
 
     // --- Cleanup ---
     useEffect(() => {
-        return () => clearInterval(intervalRef.current);
+        // Load initial state but don't start timer until user clicks Start
+        updateUiFromStorage();
+        
+        // Cleanup function
+        return () => {
+            clearInterval(intervalRef.current);
+            if (tracking) stopTracking(); 
     }, []);
 
     // --- UI Helpers ---
@@ -100,6 +212,22 @@ function SessionPage() {
             <div className="absolute top-[201px] left-[5px] text-black text-[18px] font-sarpanch">
                 {formatTime(seconds)}
             </div>
+
+            {/* Tracking status indicator */}
+            <div className="absolute top-[2px] right-[5px] flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-full ${isLooking ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-[10px] text-black font-sarpanch">
+                    {tracking ? (isLooking ? 'Tracking' : 'Away') : 'Off'}
+                </span>
+            </div>
+
+            {/* Start/Stop Tracking Button - REMOVED (keeping code for later) */}
+            {/* <button
+                onClick={tracking ? stopTracking : startTracking}
+                className="absolute top-[70px] left-[5px] w-[40px] h-[25px] bg-[#4CAF50] text-white text-[10px] font-sarpanch font-bold border-2 border-black"
+            >
+                {tracking ? 'Stop' : 'Start'}
+            </button> */}
 
             {/* Button toggles session start/stop */}
             <button

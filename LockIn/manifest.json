@@ -20,7 +20,16 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["webgazer.js", "content.js"]
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["webgazer.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

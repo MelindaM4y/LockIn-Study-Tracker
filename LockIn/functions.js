@@ -58,18 +58,26 @@ function computeMultiplier(focusedSeconds) {
 }
 
 function handleFocusLoss(lossSeconds) {
+    console.log('=== handleFocusLoss CALLED ===');
+    console.log('lossSeconds:', lossSeconds);
+    console.log('Type of lossSeconds:', typeof lossSeconds);
+    
     if (lossSeconds >= 10) {
-        // User looked away > 1 minute → reset focus and multiplier
+        console.log('Loss >= 10 seconds, resetting multiplier and focusedSeconds to 0');
         saveData({focusedSeconds: 0, multiplier: 1});
-        console.log('Focus lost >1min: multiplier reset!');
+        console.log('Multiplier reset complete!');
     } else {
+        console.log('Loss < 10 seconds, subtracting from focusedSeconds');
         // Short loss: subtract lost seconds
         getData(({focusedSeconds}) => {
+            console.log('Current focusedSeconds before subtraction:', focusedSeconds);
             focusedSeconds = Math.max(focusedSeconds - lossSeconds, 0);
             const multiplier = computeMultiplier(focusedSeconds);
+            console.log('New focusedSeconds:', focusedSeconds, 'New multiplier:', multiplier);
             saveData({focusedSeconds, multiplier});
         });
     }
+    console.log('=== handleFocusLoss END ===');
 }
 
 //High Score saving
@@ -83,41 +91,8 @@ function logData() {
 }
 
 
-// Export functions (works in service worker and window contexts)
-if (typeof module !== 'undefined' && module.exports) {
-    // Node.js style 
-    module.exports = {
-        incrementScore,
-        resetSession,
-        handleFocusLoss,
-        getData,
-        getHighScore,
-        logData
-    };
-} else if (typeof window !== 'undefined') {
-    // Browser window context (for React)
-    window.StorageHelper = {
-        incrementScore,
-        resetSession,
-        handleFocusLoss,
-        getData,
-        getHighScore,
-        logData
-    };
-} else {
-    // Service worker context (for background.js with importScripts)
-    self.StorageHelper = {
-        incrementScore,
-        resetSession,
-        handleFocusLoss,
-        getData,
-        getHighScore,
-        logData
-    };
-}
-
-// Also export as ES6 for React imports
-export {
+// Create a global StorageHelper object
+const StorageHelper = {
     incrementScore,
     resetSession,
     handleFocusLoss,
@@ -125,3 +100,6 @@ export {
     getHighScore,
     logData
 };
+
+console.log('functions.js loaded, StorageHelper:', typeof StorageHelper);
+
