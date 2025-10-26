@@ -1,16 +1,55 @@
-# React + Vite
+# 🧠 LockIn: Study Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![LockIn Logo](public/LockInLogo.png)
 
-Currently, two official plugins are available:
+**LockIn** is a Chrome extension designed to help you stay focused while studying.  
+It uses **eye-tracking** and **time tracking** to measure how long you stay focused and rewards you with points and score multipliers for maintaining concentration.  
+When you look away or lose focus, your streak (and multiplier) drops — motivating you to “lock in” and stay on task!
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🚀 Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- ⏱️ **Session Timer** — Tracks how long you've been focused in your current session.  
+- 🧮 **Score System** — Gain points over time based on your focus duration.  
+- 🔢 **Multiplier Mechanic** — The longer you stay focused, the higher your multiplier grows (up to 3×).  
+- 🧍‍♀️ **Focus Tracking (via WebGazer.js)** — Detects if you're looking at your screen.  
+- 🧱 **Custom UI** — A pixel-styled dashboard built with **React + Tailwind CSS**.  
+- 🧠 **High Score Tracking** — Stores your best focus streaks in Chrome’s local storage.  
+- 🧩 **Start/Stop Session Button** — Start a new focus session or end it anytime.  
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🧰 Tech Stack
+
+| Tool | Purpose |
+|------|----------|
+| **React** | Frontend UI |
+| **Tailwind CSS** | Styling and layout |
+| **WebGazer.js** | Eye-tracking through webcam |
+| **Chrome Extensions API (Manifest V3)** | Storage, background scripts, messaging |
+| **JavaScript (ES6)** | Core logic and state management |
+
+---
+
+## 🧑‍💻 How It Works
+
+1. When you start a session, LockIn begins tracking your time and focus.  
+2. Every second, your **score increases** based on your multiplier.  
+3. Your **multiplier grows** the longer you stay focused:
+   - 0–9 min → 1×  
+   - 10–19 min → 1.5×  
+   - 20–29 min → 2×  
+   - 30–39 min → 2.5×  
+   - 40+ min → 3×  
+4. If you look away from your screen for too long, your multiplier resets.  
+5. When you press **“Session Complete”**, your stats are saved, and the timer stops.  
+
+---
+
+## ⚙️ Installation
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/<your-username>/lockin-study-tracker.git
+cd lockin-study-tracker
