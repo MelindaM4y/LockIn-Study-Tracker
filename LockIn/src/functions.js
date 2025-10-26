@@ -1,3 +1,5 @@
+
+
 //Local data handling
 const DEFAULT_DATA = {
     score: 0,
@@ -82,8 +84,7 @@ function logData() {
 
 
 // Export functions (works in service worker and window contexts)
-const __root = (typeof self !== 'undefined') ? self : ((typeof window !== 'undefined') ? window : globalThis);
-__root.StorageHelper = {
+export {
     incrementScore,
     resetSession,
     handleFocusLoss,
