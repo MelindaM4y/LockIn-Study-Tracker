@@ -1,8 +1,7 @@
 import logo from '../assets/LockInLogo.png';
 import brick from '../assets/brickwall.png';
 import { useState, useEffect, useRef } from "react";
-// Import the data handling functions from your other file
-import { getData, incrementScore, resetSession as resetStoredSession } from '../functions';// NOTE: You must replace '../path/to/your/data-file' with the actual path to your file.
+import { getData, incrementScore, resetSession as resetStoredSession } from '../functions';
 
 function SessionPage() {
     // Timer state (local to the UI)
@@ -39,7 +38,7 @@ function SessionPage() {
             
             // 2. Call the data function to increment score and update storage
             // This also handles the logic for multiplier and high score updates.
-            incrementScore(10, 1); // 10 base points per 1 second
+            incrementScore(10, multiplier); // 10 base points per 1 second
             
             // 3. Sync the component state with the new data after incrementing
             updateUiFromStorage();
@@ -83,7 +82,7 @@ function SessionPage() {
     };
 
     const formatScore = (score) => {
-        return score.toLocaleString('en-US', { minimumIntegerDigits: 6 });
+        return score.toLocaleString('en-US', { minimumIntegerDigits: 1 });
     };
 
     // --- Render ---
@@ -103,7 +102,7 @@ function SessionPage() {
                 Track Your Studying
             </div>
 
-            <div className="absolute top-[50px] left-[115px] text-black text-[20px] font-sarpanch">
+            <div className="absolute top-[50px] left-[127px] text-black text-[20px] font-sarpanch">
                 SCORE
             </div>
 
@@ -113,16 +112,23 @@ function SessionPage() {
 
             <button
                 onClick={handleSessionComplete}
-                className="absolute top-[140px] left-[102px] w-[90px] h-[45px] bg-[#F6F872] text-black font-sarpanch font-extrabold border-3"
+                className="absolute top-[140px] left-[117px] w-[90px] h-[45px] bg-[#F6F872] text-black font-sarpanch font-extrabold border-3"
             >
                 Session <span className="text-[#BD2C2C] font-black">Complete</span>
             </button>
 
-            <div className="absolute top-[63px] left-[50px] text-black text-[45px] font-sarpanch">
+            <div className="absolute top-[63px] left-1/2 transform -translate-x-1/2 w-[180px] h-[60px] flex justify-center items-center relative">
+              <span className="text-black text-[45px] font-sarpanch text-center">
                 {formatScore(score)}
+              </span>
+
+              {/* Multiplier — positioned relative to the score */}
+              <span className="absolute top-[-8px] right-[-8px] font-sarpanch text-[#D72929] text-[30px] rotate-[-11.64deg] font-black">
+                {multiplier}x
+              </span>
             </div>
 
-            <div className="absolute top-[115px] left-[70px] text-[#FFFFFF] text-[15px] font-sarpanch">
+            <div className="absolute top-[115px] left-[87px] text-[#FFFFFF] text-[15px] font-sarpanch">
                 High Score: {formatScore(highScore)}
             </div>
         </div>
