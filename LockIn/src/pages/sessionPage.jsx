@@ -33,10 +33,15 @@ function SessionPage() {
     
     const startTracking = async () => {
         try {
+            // Tell background to start the scoring loop
+            chrome.runtime.sendMessage({ 
+                type: 'START_SCORING'
+            });
+            
             // Request camera permission (prompts for extension origin)
             await navigator.mediaDevices.getUserMedia({ video: true });
 
-            // Start WebGazer
+            // Start WebGazer in the popup
             if (window.webgazer) {
                 // Temporarily suppress the HTTPS alert from WebGazer
                 const originalAlert = window.alert;
@@ -44,36 +49,37 @@ function SessionPage() {
                 
                 window.webgazer
                     .setGazeListener((data, timestamp) => {
-                        if (data) {
-                            // Throttle to once per second (1000ms)
-                            const now = Date.now();
-                            if (now - lastGazeSentRef.current < 1000) {
-                                return;
+                        // Throttle to once per second
+                        const now = Date.now();
+                        if (now - lastGazeSentRef.current < 1000) {
+                            return;
+                        }
+                        lastGazeSentRef.current = now;
+                        
+                        // Send gaze data to background (even if null)
+                        // We'll use face detection (data exists) as the indicator of looking
+                        chrome.runtime.sendMessage({ 
+                            type: 'GAZE_DATA', 
+                            data,  // Can be null if no face detected
+                            timestamp 
+                        }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                console.log('Message error:', chrome.runtime.lastError);
                             }
-                            lastGazeSentRef.current = now;
-                            
-                            console.log('Gaze detected:', data.x.toFixed(1), data.y.toFixed(1));
-                            // Send gaze data to background for processing
-                            chrome.runtime.sendMessage({ 
-                                type: 'GAZE_DATA', 
-                                data, 
-                                timestamp 
-                            }, (response) => {
-                                if (chrome.runtime.lastError) {
-                                    console.log('Message error:', chrome.runtime.lastError);
-                                }
-                            });
+                        });
+                        
+                        if (data) {
+                            console.log('Face detected - user is looking');
                         } else {
-                            console.log('No gaze data detected');
+                            console.log('No face detected - user looked away');
                         }
                     })
                     .showVideo(false)
                     .showFaceOverlay(false)
                     .showFaceFeedbackBox(false)
                     .showPredictionPoints(false)
-                    // Adjust WebGazer settings for better accuracy
-                    .saveDataAcrossSessions(true)  // Remember calibration
-                    .applyKalmanFilter(true);      // Smooth out jittery predictions
+                    .saveDataAcrossSessions(true)
+                    .applyKalmanFilter(true);
 
                 await window.webgazer.begin();
                 
@@ -81,11 +87,9 @@ function SessionPage() {
                 window.alert = originalAlert;
                 
                 setTracking(true);
-                
-                // Start the timer when tracking begins
                 startTimer();
                 
-                console.log('👁️ WebGazer tracking started');
+                console.log('WebGazer tracking started in popup');
             }
         } catch (err) {
             console.error('Camera permission denied or unavailable:', err);
@@ -93,14 +97,16 @@ function SessionPage() {
     };
 
     const stopTracking = () => {
+        // Tell background to stop the scoring loop
+        chrome.runtime.sendMessage({ 
+            type: 'STOP_SCORING'
+        });
+        
         if (window.webgazer) {
             window.webgazer.pause();
         }
         setTracking(false);
-        
-        // Stop the timer when tracking stops
         clearInterval(intervalRef.current);
-        
         console.log('Tracking stopped');
     };
 
@@ -211,13 +217,13 @@ function SessionPage() {
                 </span>
             </div>
 
-            {/* Start/Stop Tracking Button */}
-            <button
+            {/* Start/Stop Tracking Button - REMOVED (keeping code for later) */}
+            {/* <button
                 onClick={tracking ? stopTracking : startTracking}
                 className="absolute top-[70px] left-[5px] w-[40px] h-[25px] bg-[#4CAF50] text-white text-[10px] font-sarpanch font-bold border-2 border-black"
             >
                 {tracking ? 'Stop' : 'Start'}
-            </button>
+            </button> */}
 
             <button
                 onClick={handleSessionComplete}

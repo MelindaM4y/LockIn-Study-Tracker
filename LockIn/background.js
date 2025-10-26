@@ -12,86 +12,71 @@ try {
 let isLooking = false;
 let awaySince = null;     // timestamp when user looked away
 let lastTickAt = null;    // timestamp of last heartbeat processed
+let scoringInterval = null; // interval for continuous scoring
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  // Handle gaze data from extension UI (WebGazer running in popup/side panel)
-  if (msg.type === 'GAZE_DATA') {
-    console.log('Background received GAZE_DATA:', msg.data);
-    const { data, timestamp } = msg;
-    if (!data) return;
+  // Start continuous scoring loop
+  if (msg.type === 'START_SCORING') {
+    console.log('Starting continuous scoring loop...');
+    if (scoringInterval) clearInterval(scoringInterval);
     
+    lastTickAt = Date.now();
+    scoringInterval = setInterval(() => {
+      const now = Date.now();
+      const elapsedSec = Math.floor((now - lastTickAt) / 1000);
+      
+      if (elapsedSec > 0 && isLooking) {
+        // Award points while looking (even if popup is minimized)
+        if (typeof StorageHelper !== 'undefined' && StorageHelper.incrementScore) {
+          StorageHelper.incrementScore(10, elapsedSec);
+          console.log('✅ Points awarded (background loop):', elapsedSec, 'seconds');
+        }
+        lastTickAt = now;
+      }
+    }, 1000); // Run every second
+  }
+  
+  // Stop continuous scoring loop
+  if (msg.type === 'STOP_SCORING') {
+    console.log('Stopping continuous scoring loop...');
+    if (scoringInterval) {
+      clearInterval(scoringInterval);
+      scoringInterval = null;
+    }
+    isLooking = false;
+    awaySince = null;
+    lastTickAt = null;
+  }
+  // Handle gaze data from extension UI (WebGazer running in popup)
+  if (msg.type === 'GAZE_DATA') {
+    const { data, timestamp } = msg;
     const now = Date.now();
     
-    // Get screen dimensions (assuming standard monitor, adjust if needed)
-    // More strict bounds checking - gaze must be within actual screen area
-    const screenWidth = 1920;  // Adjust to your screen width
-    const screenHeight = 1080; // Adjust to your screen height
+    // Simple logic: if WebGazer detects face/gaze = user is looking
+    // If no data = user looked away or no face detected
+    const isActuallyLooking = data !== null && data !== undefined;
     
-    // Add a margin - if gaze is too far outside screen bounds, user is looking away
-    const margin = 100; // pixels tolerance
-    const withinScreen = 
-      data.x >= -margin && 
-      data.x <= screenWidth + margin && 
-      data.y >= -margin && 
-      data.y <= screenHeight + margin;
-    
-    // Additionally check if gaze coordinates seem reasonable (not NaN or extreme values)
-    const validCoordinates = 
-      !isNaN(data.x) && 
-      !isNaN(data.y) && 
-      Math.abs(data.x) < 10000 && 
-      Math.abs(data.y) < 10000;
-    
-    const isActuallyLooking = withinScreen && validCoordinates;
-    
-    console.log('Gaze coords:', data.x.toFixed(1), data.y.toFixed(1), 
-                'Within screen:', withinScreen, 
-                'Valid:', validCoordinates,
-                'Actually looking:', isActuallyLooking);
+    console.log('Gaze data received. Face detected:', isActuallyLooking);
     
     if (isActuallyLooking) {
-      // User is looking
+      // User's face is detected - they're looking at the computer
       if (awaySince) {
         const lossSeconds = Math.max(0, Math.floor((now - awaySince) / 1000));
-        console.log('User returned! Was away for', lossSeconds, 'seconds');
+        console.log('🔵 User returned! Was away for', lossSeconds, 'seconds');
+        
         if (typeof StorageHelper !== 'undefined' && StorageHelper.handleFocusLoss) {
+          console.log('✅ Calling handleFocusLoss with', lossSeconds, 'seconds');
           StorageHelper.handleFocusLoss(lossSeconds);
-          console.log('handleFocusLoss called with', lossSeconds, 'seconds');
         }
         awaySince = null;
       }
       isLooking = true;
-      
-      // Award points (throttle to ~once per second)
-      if (!lastTickAt || now - lastTickAt >= 1000) {
-        const elapsedSec = lastTickAt ? Math.floor((now - lastTickAt) / 1000) : 1;
-        console.log('Awarding points: 10 base for', elapsedSec, 'seconds');
-        
-        if (typeof StorageHelper !== 'undefined' && StorageHelper.incrementScore) {
-          try {
-            StorageHelper.incrementScore(10, elapsedSec);
-            console.log('incrementScore called successfully');
-            
-            // Log the updated score
-            StorageHelper.getData((data) => {
-              console.log('Current score after increment:', data.score, 'Multiplier:', data.multiplier);
-            });
-          } catch (err) {
-            console.error('Error calling incrementScore:', err);
-          }
-        } else {
-          console.error('StorageHelper not available! Type:', typeof StorageHelper);
-        }
-        lastTickAt = now;
-      }
-      
-      // Notify UI of focus state
       chrome.runtime.sendMessage({ type: 'FOCUS_STATE_UPDATE', looking: true });
     } else {
-      // Not looking
+      // No face detected - user is away
       if (!awaySince) {
         awaySince = now;
-        console.log('User looked away - starting away timer');
+        console.log('🔴 User looked away (no face detected)');
       }
       isLooking = false;
       chrome.runtime.sendMessage({ type: 'FOCUS_STATE_UPDATE', looking: false });
@@ -145,16 +130,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       });
       return true; // keep the message channel open
     }
-  }
-
-  // Relay start/stop tracking control only to the active tab
-  if (msg.type === 'CONTROL_TRACKING') {
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
-      const tab = tabs && tabs[0];
-      if (tab && tab.id) {
-        chrome.tabs.sendMessage(tab.id, msg);
-      }
-    });
   }
 });
 
